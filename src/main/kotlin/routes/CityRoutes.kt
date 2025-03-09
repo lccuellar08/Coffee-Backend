@@ -3,6 +3,7 @@ package routes
 import com.lccuellar.models.City
 import com.lccuellar.models.CoffeeShop
 import com.lccuellar.models.CoffeeShops
+import com.lccuellar.models.Score
 import com.lccuellar.services.CoffeeShopService
 import io.ktor.http.*
 import io.ktor.resources.*
@@ -56,6 +57,17 @@ data class CoffeeShopResponse(
     val name: String,
     val date: LocalDate,
     val address: String,
+    val scores: List<ScoreResponse>?
+)
+
+@Serializable
+data class ScoreResponse(
+    val scoreID: Int,
+    val userID: Int,
+    val coffeeShopID: Int,
+    val scoreNum: Float,
+    val scoreType: String,
+    val notes: String?
 )
 
 @Serializable
@@ -94,13 +106,21 @@ fun Route.cityRoutes(
         val city = cityService.getCity((cityCoffeeShopsRequest.parent.cityID))
         val queryWithScores = cityCoffeeShopsRequest.withScores ?: false
         if(city != null) {
-            val coffeeShops = coffeeShopService.getCoffeeShopsInCity(city.id.value, queryWithScores)
-            println(coffeeShops)
-            val coffeeShopsResponse = coffeeShops.map {toCoffeeShopResponse(it)}
-            call.respond(CityWithCoffeeShopsResponse(
-                toCityResponse(city),
-                coffeeShopsResponse
-            ))
+            if(queryWithScores) {
+                val coffeeShopsWithScores = coffeeShopService.getCoffeeShopsWithScoresInCity(city.id.value)
+                val coffeeShopsResponse = coffeeShopsWithScores.map { toCoffeeShopResponse(it.coffeeShop, it.scores)}
+                call.respond(CityWithCoffeeShopsResponse(
+                    toCityResponse(city),
+                    coffeeShopsResponse
+                ))
+            } else {
+                val coffeeShops = coffeeShopService.getCoffeeShopsInCity(city.id.value)
+                val coffeeShopsResponse = coffeeShops.map {toCoffeeShopResponse(it, emptyList())}
+                call.respond(CityWithCoffeeShopsResponse(
+                    toCityResponse(city),
+                    coffeeShopsResponse
+                ))
+            }
         } else {
             call.respond(HttpStatusCode.NotFound)
         }
@@ -115,7 +135,19 @@ fun toCityResponse(city: City): CityResponse {
     )
 }
 
-fun toCoffeeShopResponse(coffeeShop: CoffeeShop): CoffeeShopResponse {
+fun toScoreResponse(score: Score): ScoreResponse {
+    return ScoreResponse(
+        scoreID = score.id.value,
+        userID = score.user.id.value,
+        coffeeShopID = score.coffeeShop.id.value,
+        scoreNum = score.scoreNum,
+        scoreType =  score.scoreType,
+        notes = score.notes
+    )
+}
+
+fun toCoffeeShopResponse(coffeeShop: CoffeeShop, scores: List<Score>): CoffeeShopResponse {
+
     return transaction {
         CoffeeShopResponse(
             coffeeShopID = coffeeShop.id.value,
@@ -123,7 +155,8 @@ fun toCoffeeShopResponse(coffeeShop: CoffeeShop): CoffeeShopResponse {
             name = coffeeShop.name,
             // Convert java.time.LocalDate to kotlinx.datetime.LocalDate
             date = coffeeShop.date.toKotlinLocalDate(),
-            address = coffeeShop.address
+            address = coffeeShop.address,
+            scores = if(scores.isEmpty()) null else scores.map{ toScoreResponse(it)}
         )
     }
 }

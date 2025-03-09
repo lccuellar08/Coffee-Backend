@@ -3,10 +3,10 @@ package com.lccuellar.services
 import com.lccuellar.models.CoffeeShop
 import com.lccuellar.models.Score
 import com.lccuellar.repositories.CoffeeShopRepository
+import com.lccuellar.repositories.CoffeeShopWithScores
 import com.lccuellar.repositories.ScoreRepository
 import java.time.LocalDate
 
-data class CoffeeShopWithScores(val coffeeShop: CoffeeShop, val scores: List<Score>)
 
 class CoffeeShopService(
     private val repository: CoffeeShopRepository,
@@ -23,9 +23,14 @@ class CoffeeShopService(
         return CoffeeShopWithScores(coffeeShop, scores)
     }
 
-    suspend fun getCoffeeShopsInCity(cityID: Int, withScores: Boolean): List<CoffeeShop> {
-        val coffeeShops = repository.findByCity(cityID, withScores)
+    suspend fun getCoffeeShopsInCity(cityID: Int): List<CoffeeShop> {
+        val coffeeShops = repository.findByCity(cityID)
         return coffeeShops
+    }
+
+    suspend fun getCoffeeShopsWithScoresInCity(cityID: Int): List<CoffeeShopWithScores> {
+        val coffeeShopsWithScores = repository.findByCityWithScores(cityID)
+        return coffeeShopsWithScores
     }
 
     suspend fun createCoffeeShopSCore(coffeeShopID: Int, userID: Int,
