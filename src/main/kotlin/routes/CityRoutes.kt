@@ -1,0 +1,129 @@
+package routes
+
+import com.lccuellar.models.City
+import com.lccuellar.models.CoffeeShop
+import com.lccuellar.models.CoffeeShops
+import com.lccuellar.services.CoffeeShopService
+import io.ktor.http.*
+import io.ktor.resources.*
+import io.ktor.server.auth.*
+import io.ktor.server.request.*
+import io.ktor.server.resources.*
+import io.ktor.server.response.*
+import io.ktor.server.routing.*
+import io.ktor.server.routing.get
+import io.ktor.server.routing.post
+import kotlinx.serialization.Serializable
+import services.CityService
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.toKotlinLocalDate
+import org.jetbrains.exposed.sql.ResultRow
+import org.jetbrains.exposed.sql.transactions.transaction
+
+@Serializable
+@Resource("/cities")
+class Cities {
+    @Serializable
+    @Resource("new")
+    class NewCity(val parent: Cities = Cities())
+
+    @Serializable
+    @Resource("{cityID}")
+    class ID(val parent: Cities = Cities(), val cityID: Int) {
+        @Serializable
+        @Resource("coffee_shops")
+        class CityCoffeeShops(val parent: ID, val withScores: Boolean? = false)
+    }
+}
+
+@Serializable
+data class NewCityRequest(
+    val name: String,
+    val state: String,
+)
+
+@Serializable
+data class CityResponse(
+    val cityID: Int,
+    val name: String,
+    val state: String,
+)
+
+@Serializable
+data class CoffeeShopResponse(
+    val coffeeShopID: Int,
+    val cityID: Int,
+    val name: String,
+    val date: LocalDate,
+    val address: String,
+)
+
+@Serializable
+data class CityWithCoffeeShopsResponse(
+    val city: CityResponse,
+    val coffeeShops: List<CoffeeShopResponse>
+)
+
+fun Route.cityRoutes(
+    cityService: CityService,
+    coffeeShopService: CoffeeShopService) {
+    authenticate("auth-jwt") {
+        post<Cities.NewCity> {
+            val request = call.receive<NewCityRequest>()
+            val city = cityService.createCity(request.name, request.state)
+
+            call.respond(toCityResponse(city))
+        }
+    }
+    get<Cities> {_ ->
+        val allCities = cityService.getAllCities()
+        val allCitiesResponse = allCities.map {
+            toCityResponse(it)
+        }
+        call.respond(allCitiesResponse)
+    }
+    get<Cities.ID> { cityRequest ->
+        val city = cityService.getCity(cityRequest.cityID)
+        if(city != null) {
+            call.respond(toCityResponse(city))
+        } else {
+            call.respond(HttpStatusCode.NotFound)
+        }
+    }
+    get<Cities.ID.CityCoffeeShops> {cityCoffeeShopsRequest ->
+        val city = cityService.getCity((cityCoffeeShopsRequest.parent.cityID))
+        val queryWithScores = cityCoffeeShopsRequest.withScores ?: false
+        if(city != null) {
+            val coffeeShops = coffeeShopService.getCoffeeShopsInCity(city.id.value, queryWithScores)
+            println(coffeeShops)
+            val coffeeShopsResponse = coffeeShops.map {toCoffeeShopResponse(it)}
+            call.respond(CityWithCoffeeShopsResponse(
+                toCityResponse(city),
+                coffeeShopsResponse
+            ))
+        } else {
+            call.respond(HttpStatusCode.NotFound)
+        }
+    }
+}
+
+fun toCityResponse(city: City): CityResponse {
+    return CityResponse(
+        cityID = city.id.value,
+        name = city.name,
+        state = city.state
+    )
+}
+
+fun toCoffeeShopResponse(coffeeShop: CoffeeShop): CoffeeShopResponse {
+    return transaction {
+        CoffeeShopResponse(
+            coffeeShopID = coffeeShop.id.value,
+            cityID = coffeeShop.city.id.value,
+            name = coffeeShop.name,
+            // Convert java.time.LocalDate to kotlinx.datetime.LocalDate
+            date = coffeeShop.date.toKotlinLocalDate(),
+            address = coffeeShop.address
+        )
+    }
+}
