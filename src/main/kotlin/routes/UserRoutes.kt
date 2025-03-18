@@ -1,33 +1,30 @@
 package com.lccuellar.routes
 
-import com.lccuellar.models.User
+import JWTConfig.generateToken
 import com.lccuellar.services.UserService
 import io.ktor.http.*
 import io.ktor.resources.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
 import io.ktor.server.request.*
-import io.ktor.server.resources.*
+//import io.ktor.server.resources.*
+import io.ktor.server.resources.Resources
+import io.ktor.server.resources.post
+import io.ktor.server.resources.get
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
-import io.ktor.server.routing.get
-import io.ktor.server.routing.post
 import kotlinx.serialization.Serializable
 
 @Serializable
 @Resource("/users")
-class Users {
-    @Serializable
-    @Resource("register")
-    class Register(val parent: Users = Users())
-
+class UserRoutes {
     @Serializable
     @Resource("login")
-    class Login(val parent: Users = Users())
+    class Login(val parent: UserRoutes = UserRoutes())
 
     @Serializable
-    @Resource("{id}")
-    class ID(val parent: Users = Users(), val id: Int)
+    @Resource("{userID}")
+    class ID(val parent: UserRoutes = UserRoutes(), val userID: Int)
 }
 
 @Serializable
@@ -49,30 +46,38 @@ data class UserResponse(
 )
 
 fun Route.userRoutes(userService: UserService) {
-    post<Users.Register> {
-        val request = call.receive<RegisterRequest>()
-        val user = userService.createUser(request.username, request.password)
+//    post<UserRoutes.Register> {
+//        val request = call.receive<RegisterRequest>()
+//        val user = userService.createUser(request.username, request.password)
+//
+//        call.respond(UserResponse(user.id.value, user.username))
+//    }
 
-        call.respond(UserResponse(user.id.value, user.username))
-    }
-
-    post<Users.Login> {
+    post<UserRoutes.Login> {
+        println("Hit users login")
         val request = call.receive<LoginRequest>()
         val user = userService.validateUser(request.username, request.password)
         if (user != null) {
-            val token = generateToken(user)
+            val token = generateToken(user.id.value, user.username)
             call.respond(hashMapOf("token" to token))
         } else {
             call.respond(HttpStatusCode.Unauthorized)
         }
     }
 
-    authenticate("auth-jwt") {
-        get<Users.ID> { _ ->
-            val principal = call.principal<JWTPrincipal>()
-            val userID = principal?.payload?.getClaim("user_id")?.asInt()
+//    get<UserRoutes.ID> {userReq ->
+//        println("Hit users id get")
+//        call.respond(hashMapOf("userID" to userReq.userID))
+//    }
 
-            if(userID != null) {
+    authenticate("auth-jwt") {
+        get<UserRoutes.ID> { userReq ->
+            println("Hit users id get")
+            val userID = userReq.userID
+            val principal = call.principal<JWTPrincipal>()
+            val thisUserID = principal?.payload?.getClaim("user_id")?.asInt()
+
+            if(thisUserID != null) {
                 val user = userService.findByID(userID)
                 if(user != null) {
                     call.respond(UserResponse(user.id.value, user.username))
@@ -84,8 +89,4 @@ fun Route.userRoutes(userService: UserService) {
             }
         }
     }
-}
-
-fun generateToken(user: User): String {
-    return "Bearer ${user.id.value}"
 }

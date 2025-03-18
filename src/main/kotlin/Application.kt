@@ -21,7 +21,7 @@ fun Application.configurePlugins() {
             realm = JWTConfig.REALM
             verifier(JWTConfig.verifier)
             validate { credential ->
-                if (credential.payload.getClaim("user_id").asString() != null) {
+                if (credential.payload.getClaim("user_id").asInt() != null) {
                     JWTPrincipal(credential.payload)
                 } else {
                     null
@@ -30,18 +30,13 @@ fun Application.configurePlugins() {
         }
     }
     install(ContentNegotiation) {
-        json(Json {
-            prettyPrint = true
-            isLenient = true
-            ignoreUnknownKeys = true
-        })
+        json()
     }
 }
 
 fun Application.module() {
 
     DatabaseFactory.init()
-
     configurePlugins()
     configureRouting()
     configureHTTP()
