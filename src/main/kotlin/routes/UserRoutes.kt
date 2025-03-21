@@ -23,6 +23,10 @@ class UserRoutes {
     class Login(val parent: UserRoutes = UserRoutes())
 
     @Serializable
+    @Resource("register")
+    class Register(val parent: UserRoutes = UserRoutes())
+
+    @Serializable
     @Resource("{userID}")
     class ID(val parent: UserRoutes = UserRoutes(), val userID: Int)
 }
@@ -46,12 +50,12 @@ data class UserResponse(
 )
 
 fun Route.userRoutes(userService: UserService) {
-//    post<UserRoutes.Register> {
-//        val request = call.receive<RegisterRequest>()
-//        val user = userService.createUser(request.username, request.password)
-//
-//        call.respond(UserResponse(user.id.value, user.username))
-//    }
+    post<UserRoutes.Register> {
+        val request = call.receive<RegisterRequest>()
+        val user = userService.createUser(request.username, request.password)
+
+        call.respond(UserResponse(user.id.value, user.username))
+    }
 
     post<UserRoutes.Login> {
         println("Hit users login")
@@ -64,11 +68,6 @@ fun Route.userRoutes(userService: UserService) {
             call.respond(HttpStatusCode.Unauthorized)
         }
     }
-
-//    get<UserRoutes.ID> {userReq ->
-//        println("Hit users id get")
-//        call.respond(hashMapOf("userID" to userReq.userID))
-//    }
 
     authenticate("auth-jwt") {
         get<UserRoutes.ID> { userReq ->

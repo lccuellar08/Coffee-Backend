@@ -2,23 +2,22 @@ package routes
 
 import com.lccuellar.models.City
 import com.lccuellar.models.CoffeeShop
-import com.lccuellar.models.CoffeeShops
 import com.lccuellar.models.Score
 import com.lccuellar.services.CoffeeShopService
 import io.ktor.http.*
 import io.ktor.resources.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
-import io.ktor.server.resources.*
 import io.ktor.server.response.*
+import io.ktor.server.resources.put
+import io.ktor.server.resources.post
+import io.ktor.server.resources.get
+import io.ktor.server.resources.delete
 import io.ktor.server.routing.*
-import io.ktor.server.routing.get
-import io.ktor.server.routing.post
 import kotlinx.serialization.Serializable
 import services.CityService
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.toKotlinLocalDate
-import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.transactions.transaction
 
 @Serializable
@@ -38,9 +37,15 @@ class Cities {
 }
 
 @Serializable
-data class NewCityRequest(
+data class CityPostRequest(
     val name: String,
     val state: String,
+)
+
+@Serializable
+data class CityPutRequest(
+    val name: String?,
+    val state: String?
 )
 
 @Serializable
@@ -80,12 +85,32 @@ fun Route.cityRoutes(
     cityService: CityService,
     coffeeShopService: CoffeeShopService) {
     authenticate("auth-jwt") {
-        post<Cities.NewCity> {
-            val request = call.receive<NewCityRequest>()
+        post<Cities> {
+            val request = call.receive<CityPostRequest>()
             val city = cityService.createCity(request.name, request.state)
 
             call.respond(toCityResponse(city))
         }
+        put<Cities.ID> { city ->
+            val request = call.receive<CityPutRequest>()
+            val updatedCity = cityService.updateCity(city.cityID, request.name, request.state)
+
+            if(updatedCity == null) {
+                call.respond(HttpStatusCode.NotFound)
+            } else {
+                call.respond(toCityResponse(updatedCity))
+            }
+        }
+        delete<Cities.ID> { city ->
+
+            val deleted = cityService.deleteCity(city.cityID)
+            if(deleted) {
+                call.respond(HttpStatusCode.OK)
+            } else {
+                call.respond(HttpStatusCode.InternalServerError)
+            }
+        }
+
     }
     get<Cities> {_ ->
         val allCities = cityService.getAllCities()

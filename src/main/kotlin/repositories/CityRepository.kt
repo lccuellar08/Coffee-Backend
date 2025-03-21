@@ -12,6 +12,21 @@ class CityRepository {
         }
     }
 
+    suspend fun update(cityID: Int, name: String?, state: String?): City? = dbQuery {
+        City.findByIdAndUpdate(cityID) {
+            it.name = name ?: it.name
+            it.state = state ?: it.state
+        }
+    }
+
+    suspend fun delete(cityID: Int): Boolean {
+        val city = findByID(cityID) ?: return false
+        dbQuery {
+            city.delete()
+        }
+        return true
+    }
+
     suspend fun findByID(id: Int): City? = dbQuery {
         City.findById(id)
     }

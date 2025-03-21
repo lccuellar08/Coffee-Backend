@@ -17,6 +17,23 @@ class CoffeeShopRepository {
             this.address = address
         }
     }
+
+    suspend fun update(coffeeShopID: Int, name: String?, date: LocalDate?, address: String?): CoffeeShop? = dbQuery {
+        CoffeeShop.findByIdAndUpdate(coffeeShopID) {
+            it.name = name ?: it.name
+            it.date = date ?: it.date
+            it.address = address ?: it.address
+        }
+    }
+
+    suspend fun delete(coffeeShopID: Int): Boolean {
+        val coffeeShop = findByID(coffeeShopID) ?: return false
+        dbQuery {
+            coffeeShop.delete()
+        }
+        return true
+    }
+
     suspend fun findByID(id: Int): CoffeeShop? = dbQuery {
         CoffeeShop.findById(id)
     }

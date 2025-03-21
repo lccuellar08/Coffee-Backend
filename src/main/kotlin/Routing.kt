@@ -17,9 +17,14 @@ import services.CityService
 
 fun Application.configureRouting() {
     routing {
-        val userService = UserService(UserRepository())
-        val cityService = CityService(CityRepository())
-        val coffeeShopService = CoffeeShopService(CoffeeShopRepository(), ScoreRepository())
+        val userRepository = UserRepository()
+        val cityRepository = CityRepository()
+        val coffeeShopRepository = CoffeeShopRepository()
+        val scoreRepository = ScoreRepository()
+
+        val userService = UserService(userRepository)
+        val coffeeShopService = CoffeeShopService(coffeeShopRepository, scoreRepository)
+        val cityService = CityService(cityRepository, coffeeShopService)
 
         rootRoutes()
         userRoutes(userService)

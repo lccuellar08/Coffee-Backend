@@ -17,11 +17,31 @@ class ScoreRepository {
         }
     }
 
+    suspend fun update(scoreID: Int, scoreNum: Float?, scoreType: String?, notes: String?): Score? = dbQuery {
+        Score.findByIdAndUpdate(scoreID) {
+            it.scoreNum = scoreNum ?: it.scoreNum
+            it.scoreType = scoreType ?: it.scoreType
+            it.notes = scoreType ?: it.notes
+        }
+    }
+
+    suspend fun delete(scoreID: Int): Boolean {
+        val score = findByID(scoreID) ?: return false
+        dbQuery {
+            score.delete()
+        }
+        return true
+    }
+
     suspend fun findByCoffeeShop(coffeeShopID: Int): List<Score> = dbQuery {
         Score.find {Scores.coffeeShopID eq coffeeShopID }.toList()
     }
 
     suspend fun findByUser(userID: Int): List<Score> = dbQuery {
         Score.find { Scores.userID eq userID }.toList()
+    }
+
+    suspend fun findByID(scoreID: Int): Score? = dbQuery {
+        Score.findById(scoreID)
     }
 }

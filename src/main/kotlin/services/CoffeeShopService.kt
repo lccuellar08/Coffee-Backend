@@ -17,6 +17,16 @@ class CoffeeShopService(
         return repository.create(cityID, name, date, address)
     }
 
+    suspend fun deleteCoffeeShop(coffeeShopID: Int): Boolean {
+        val scores = scoreRepository.findByCoffeeShop(coffeeShopID)
+        for(score in scores) {
+            val deleted = scoreRepository.delete(score.id.value)
+            if(!deleted) return false
+        }
+
+        return repository.delete(coffeeShopID)
+    }
+
     suspend fun getCoffeeShopWithScores(coffeeShopID: Int): CoffeeShopWithScores? {
         val coffeeShop = repository.findByID(coffeeShopID) ?: return null
         val scores = scoreRepository.findByCoffeeShop(coffeeShopID) ?: emptyList()
