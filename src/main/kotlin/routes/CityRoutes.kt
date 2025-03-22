@@ -1,24 +1,19 @@
 package routes
 
 import com.lccuellar.models.City
-import com.lccuellar.models.CoffeeShop
-import com.lccuellar.models.Score
 import com.lccuellar.services.CoffeeShopService
 import io.ktor.http.*
 import io.ktor.resources.*
 import io.ktor.server.auth.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
-import io.ktor.server.resources.put
+import io.ktor.server.resources.patch
 import io.ktor.server.resources.post
 import io.ktor.server.resources.get
 import io.ktor.server.resources.delete
 import io.ktor.server.routing.*
 import kotlinx.serialization.Serializable
 import services.CityService
-import kotlinx.datetime.LocalDate
-import kotlinx.datetime.toKotlinLocalDate
-import org.jetbrains.exposed.sql.transactions.transaction
 
 @Serializable
 @Resource("/cities")
@@ -43,7 +38,7 @@ data class CityPostRequest(
 )
 
 @Serializable
-data class CityPutRequest(
+data class CityPatchRequest(
     val name: String?,
     val state: String?
 )
@@ -53,26 +48,6 @@ data class CityResponse(
     val cityID: Int,
     val name: String,
     val state: String,
-)
-
-@Serializable
-data class CoffeeShopResponse(
-    val coffeeShopID: Int,
-    val cityID: Int,
-    val name: String,
-    val date: LocalDate,
-    val address: String,
-    val scores: List<ScoreResponse>?
-)
-
-@Serializable
-data class ScoreResponse(
-    val scoreID: Int,
-    val userID: Int,
-    val coffeeShopID: Int,
-    val scoreNum: Float,
-    val scoreType: String,
-    val notes: String?
 )
 
 @Serializable
@@ -91,8 +66,8 @@ fun Route.cityRoutes(
 
             call.respond(toCityResponse(city))
         }
-        put<Cities.ID> { city ->
-            val request = call.receive<CityPutRequest>()
+        patch<Cities.ID> { city ->
+            val request = call.receive<CityPatchRequest>()
             val updatedCity = cityService.updateCity(city.cityID, request.name, request.state)
 
             if(updatedCity == null) {
@@ -107,7 +82,7 @@ fun Route.cityRoutes(
             if(deleted) {
                 call.respond(HttpStatusCode.OK)
             } else {
-                call.respond(HttpStatusCode.InternalServerError)
+                call.respond(HttpStatusCode.Conflict)
             }
         }
 
@@ -160,28 +135,4 @@ fun toCityResponse(city: City): CityResponse {
     )
 }
 
-fun toScoreResponse(score: Score): ScoreResponse {
-    return ScoreResponse(
-        scoreID = score.id.value,
-        userID = score.user.id.value,
-        coffeeShopID = score.coffeeShop.id.value,
-        scoreNum = score.scoreNum,
-        scoreType =  score.scoreType,
-        notes = score.notes
-    )
-}
 
-fun toCoffeeShopResponse(coffeeShop: CoffeeShop, scores: List<Score>): CoffeeShopResponse {
-
-    return transaction {
-        CoffeeShopResponse(
-            coffeeShopID = coffeeShop.id.value,
-            cityID = coffeeShop.city.id.value,
-            name = coffeeShop.name,
-            // Convert java.time.LocalDate to kotlinx.datetime.LocalDate
-            date = coffeeShop.date.toKotlinLocalDate(),
-            address = coffeeShop.address,
-            scores = if(scores.isEmpty()) null else scores.map{ toScoreResponse(it)}
-        )
-    }
-}

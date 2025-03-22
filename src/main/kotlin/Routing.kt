@@ -11,6 +11,7 @@ import com.lccuellar.services.UserService
 import io.ktor.server.application.*
 import io.ktor.server.routing.*
 import routes.cityRoutes
+import routes.coffeeShopRoutes
 import routes.rootRoutes
 import services.CityService
 
@@ -29,5 +30,6 @@ fun Application.configureRouting() {
         rootRoutes()
         userRoutes(userService)
         cityRoutes(cityService, coffeeShopService)
+        coffeeShopRoutes(coffeeShopService, cityService)
     }
 }

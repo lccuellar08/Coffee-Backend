@@ -17,6 +17,10 @@ class CoffeeShopService(
         return repository.create(cityID, name, date, address)
     }
 
+    suspend fun updateCoffeeShop(coffeeShopID: Int, name: String?, date: LocalDate?, address: String?): CoffeeShop? {
+        return repository.update(coffeeShopID, name, date, address)
+    }
+
     suspend fun deleteCoffeeShop(coffeeShopID: Int): Boolean {
         val scores = scoreRepository.findByCoffeeShop(coffeeShopID)
         for(score in scores) {
