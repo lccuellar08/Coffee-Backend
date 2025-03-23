@@ -2,6 +2,7 @@ package com.lccuellar.services
 
 import com.lccuellar.models.CoffeeShop
 import com.lccuellar.models.Score
+import com.lccuellar.models.Scores
 import com.lccuellar.repositories.CoffeeShopRepository
 import com.lccuellar.repositories.CoffeeShopWithScores
 import com.lccuellar.repositories.ScoreRepository
@@ -47,8 +48,20 @@ class CoffeeShopService(
         return coffeeShopsWithScores
     }
 
-    suspend fun createCoffeeShopSCore(coffeeShopID: Int, userID: Int,
+    suspend fun getCoffeeShopScores(coffeeShopID: Int): List<Score> {
+        return scoreRepository.findByCoffeeShop(coffeeShopID)
+    }
+
+    suspend fun createCoffeeShopScore(coffeeShopID: Int, userID: Int,
                                       scoreNum: Float, scoreType: String, notes: String?): Score {
-        return scoreRepository.create(coffeeShopID, userID, scoreNum, scoreType, notes)
+        return scoreRepository.create(userID, coffeeShopID, scoreNum, scoreType, notes)
+    }
+
+    suspend fun updateCoffeeShopScore(scoreID: Int, scoreNum: Float?, scoreType: String?, notes: String?): Score? {
+        return scoreRepository.update(scoreID, scoreNum, scoreType, notes)
+    }
+
+    suspend fun deleteCoffeeShopScore(scoreID: Int): Boolean {
+        return scoreRepository.delete(scoreID)
     }
 }
